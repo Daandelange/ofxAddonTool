@@ -1,0 +1,2 @@
+# Exclude addons.txt in which every clone stores it's configuration.
+addons.txt
