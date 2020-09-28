@@ -133,43 +133,72 @@ if [ "$USER_ACTION" = "help" ]; then
 fi # Endif HELP
 
 # Get project information
-curDir=`pwd`;
-repoDiagnosticMessage="";
-#repoName= basename `git rev-parse --show-toplevel`;
-repoName=$( basename "$curDir" );
+curDir=`pwd`; # ofxAdonTool dir
+let dirSearchLimit=3;
+dirSearchPath="";
+if [ `basename "$curDir"` = "ofxAddonTool" ]; then
+  # project is at least 1 directory lower
+  dirSearchPath="../";
+fi
+# Search for project path
+while [ "$dirSearchLimit" -gt 0 ]; do
+  # Detects a project by going down to the OF folder then looking for an addons folder
+  if [ -d "${curDir}/${dirSearchPath}../../../addons" ]; then
+    projectDir=$(realpath "${curDir}/${dirSearchPath}");
+    #echo "Found OF/addons ! (`realpath ${projectDir}`)";
+    break;
+  else
+    #echo "Ignoring=`basename $(realpath ${curDir}/${dirSearchPath})`";
+    dirSearchPath+="../";
+  fi
+  # decrement
+  dirSearchLimit=$[$dirSearchLimit-1];
+done
 
-# Check if we have a git repo
-if [ ! -d "$curDir/.git" ]; then
-  echo "${style_red}ERROR: $curDir is not a git repository!${style_reset}";
+# Unable to find the project root ?
+if [[ -z "$projectDir" || ! -d "$projectDir" ]]; then
+  echo "${style_red}ERROR : the main OF project folder was not found. Please make sure this script is located within your OF project folder.${style_reset}";
   exit 1;
 fi
+#projectDir=$(git rev-parse --show-toplevel); # use git to find project folder[drawback: needs to have git enabled]
+#projectDir="";
 
-# Check for updates
-git fetch --quiet > /dev/null 2>&1 # Hides output as --quiet doesn't silence git fatal errors such as no internet.
-let projectRemoteUnavailable=$? # keep this line directly after to git fetch
-#if [ "$projectRemoteUnavailable" -gt 0 ]; then
-if [ "$projectRemoteUnavailable" -gt 0 ]; then
-  repoDiagnosticMessage+="${style_red}Warning: Could not fetch updates.${style_reset} ";
-fi
+repoDiagnosticMessage="";
+let projectRemoteUnavailable=0;
+#repoName= basename `git rev-parse --show-toplevel`;
+repoName=$( basename "$projectDir" );
 
-if [[ ! -z `git status --porcelain` ]]; then
-  repoDiagnosticMessage+="${style_yellow}Your branch has local changes.${style_reset} ";
-fi
+# Check if we have a git repo
+if [ ! -d "$projectDir/.git" ]; then
+  echo "${style_yellow}Warning: $projectDir is not a git repository. Not checking for updates.${style_reset}";
+  #exit 1;
+else
+  # Check for updates
+  git fetch --quiet > /dev/null 2>&1 # Hides output as --quiet doesn't silence git fatal errors such as no internet.
+  let projectRemoteUnavailable=$? # keep this line directly after to git fetch
+  
+  if [ "$projectRemoteUnavailable" -gt 0 ]; then
+    repoDiagnosticMessage+="${style_red}Warning: Could not fetch updates.${style_reset} ";
+  fi
 
-if [[ ! -z `git log ..@{u}` ]]; then
-  repoDiagnosticMessage+="${style_yellow}New comits are available.${style_reset} ";
-fi
+  if [[ ! -z `git status --porcelain` ]]; then
+    repoDiagnosticMessage+="${style_yellow}Your branch has local changes.${style_reset} ";
+  fi
 
+  if [[ ! -z `git log ..@{u}` ]]; then
+    repoDiagnosticMessage+="${style_yellow}New comits are available.${style_reset} ";
+  fi
+fi # Main repo git checks
 
 # Locate the addons folder
-#cd "$curDir"
-cd ../../../addons >> /dev/null 2>&1 ; #silenced
+cd "$projectDir/../../../addons" >> /dev/null 2>&1 ; #silenced
+#cd ../../../addons >> /dev/null 2>&1 ; #silenced
 if [[ $? -gt 0 ]]; then
   echo "${style_red}ERROR : the addons folder was not found.${style_reset}"
   exit 1;
 fi
-addonsDir=`pwd`
-cd "$curDir"
+addonsDir=`pwd`;
+cd "$projectDir";
 
 
 # Show intro banner
@@ -184,16 +213,15 @@ if [ "$SHOW_INTRO" -eq 1 ]; then
   # Print some repository information
   if [[ `figlet "."` && $? -eq 0 ]]; then
     # Figlet is installed
-    figlet -f basic "$repoName";
+    figlet -f basic " $repoName";
   elif [[ `toilet "."` && $? -eq 0 ]]; then
     # Figlet is installed
     toilet -f basic "$repoName";
   else
     # No ascii art tool is installed
-    echo "Project    : $repoName";
+    echo "OF Project : $repoName";
   fi
-
-  echo "Path       : $curDir";
+  echo   "Path       : $projectDir";
   if [[ ! -z "$repoDiagnosticMessage" ]]; then
     echo "Diagnotsic : $repoDiagnosticMessage";
   else
@@ -201,7 +229,8 @@ if [ "$SHOW_INTRO" -eq 1 ]; then
   fi
   echo " "
   echo "Addons configuration file : $curDir/addons.txt";
-  echo "Detected addons directory : $addonsDir";
+  numInstalledAddons=$(ls -l $addonsDir | grep -v ^ofx | wc -l | xargs); # xargs strips spaces
+  echo "Detected addons directory : $addonsDir ($numInstalledAddons installed addons)";
   echo " "
   #echo "Working from $repoName";
 fi # end show intro banner
@@ -216,12 +245,12 @@ fi
 echo "";
 
 
-
 # Sync with addons.make ?
 if [ "$USER_ACTION" = "sync" ]; then
   echo "Syncing is not implemented yet. Bye.";
   exit 0;
 fi
+
 
 # Table formatting
 # Column widths are set proportionally to the available terminal width
@@ -241,8 +270,6 @@ printf "$PRINTF_TABLE_LINE" "- - - - - - - - - - - - - - - - - - - - " "- - - - 
 #printf "%-30s | %-50s | %-16s | %-16s | %-16s | %-16s | %-16s \n" "Addon" "Required Repo" "Needed Branch" "Exists" "Remote URL" "Local Branch" "Local Changes"
 printf "$PRINTF_TABLE_LINE" "Addon" "Required Repo" "Needed Branch" "Local Branch" "Tracking target" "Diagnostic"
 printf "$PRINTF_TABLE_LINE" "- - - - - - - - - - - - - - - - - - - - " "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - " "- - - - - - - - - - - - - - - - " "- - - - - - - - - - - - - - - - " "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - " "- - - - - - - - - - - - - - - - - - - - - - - - - - - - - "
-
-exit 0; #tmp
 
 # This function receives a line with the following format : NAME URL BRANCH
 # Called for each addon in addons.txt

@@ -1,12 +1,11 @@
 ofxAddonTool
 ============
-![ofxAddonTool](./ofxaddons_thumbnail.png)
+![ofxAddonTool](./ofxaddons_thumbnail.png)  
 Bash script for managing your OpenFrameworks addon dependencies using git.
 
 Introduction
 ------------
-Working with several OpenFrameworks projects, each requiring specific versions of ofxAddons can be a headache.  
-This script aims to simplify dependency installation, verification and updating.  
+Working with several OpenFrameworks projects, each requiring specific versions of ofxAddons can be a headache. This script aims to simplify dependency installation, verification and updating.  
 
 ### How it works
 It compares a configuration file (`addons.txt`) against the `openframeworks/addons` folder then runs some diagnostic checks and actions on them.
