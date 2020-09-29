@@ -32,8 +32,8 @@ git submodule add https://github.com/Daandelange/ofxAddonTool.git
 ````
 
 If you want fancy ASCI art, install `toilet` or `figlet`. (optional)
-- Mac : `brew install figment`
-- Linux : `apt install figment`
+- Mac : `brew install figlet`
+- Linux : `apt install figlet`
 
 Setup
 -----
@@ -71,8 +71,8 @@ git submodule update
 Compatibility
 -------------
 This script is coded in pure Bash script. It runs on Linux and Mac. Windows is untested but should work.
-An internet connection is recomended to get the latest remote updates. 
-*Note: On this script could easily be adapted as a git addon manager, without anything OpenFrameworks.*
+An internet connection is recommended to get the latest remote updates.  
+*Note: This script could easily be adapted as a git addon manager, without anything OpenFrameworks.*
 
 
 Version history
