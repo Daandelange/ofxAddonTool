@@ -77,4 +77,4 @@ An internet connection is recommended to get the latest remote updates.
 
 Version history
 ---------------
-See [CHANGELOG.md](./CHANGELOG.MD).
+See [CHANGELOG.md](./CHANGELOG.md).

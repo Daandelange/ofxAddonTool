@@ -213,9 +213,9 @@ if [ "$SHOW_INTRO" -eq 1 ]; then
   # Print some repository information
   if [[ `figlet "."` && $? -eq 0 ]]; then
     # Figlet is installed
-    figlet -f basic " $repoName";
+    figlet -w "$(tput cols)" -f big " $repoName";
   elif [[ `toilet "."` && $? -eq 0 ]]; then
-    # Figlet is installed
+    # Toilet is installed
     toilet -f basic "$repoName";
   else
     # No ascii art tool is installed
