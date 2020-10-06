@@ -36,7 +36,7 @@
 #set -ex # <-- useful for debugging, shows the lines being executed during execution
 #set -e  # <-- Stop script on any error
 
-VERSION_NUMBER="0.2_alpha";
+VERSION_NUMBER="0.3_alpha";
 
 # Terminal color definitions
 style_red=$(tput setaf 1)

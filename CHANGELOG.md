@@ -1,6 +1,10 @@
 ofxAddonTool CHANGELOG
 ======================
 
+### Version 0.3_alpha (master):
+- Fix: Table layout on Windows
+- Fix: Banner takes full width
+
 ### Version 0.2_alpha (28-09-2020):
 - Improves display layout
 - Added help
