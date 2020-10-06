@@ -95,10 +95,10 @@ fi
 
 # Print HELP ?
 if [ "$USER_ACTION" = "help" ]; then
-  if [[ `figlet "."` && $? -eq 0 ]]; then
+  if [[ $(figlet "." 2> /dev/null ) && $? -eq 0 ]]; then
     # Figlet is installed
     figlet -w "$(tput cols)" -f big "ofxAddonTool"; # -t doesn't work on OSX. Using -w instead
-  elif [[ `toilet "."` && $? -eq 0 ]]; then
+  elif [[ $(toilet "." 2> /dev/null ) && $? -eq 0 ]]; then
     # Toilet is installed
     toilet -t -f big "ofxAddonTool";
   else
@@ -169,23 +169,27 @@ let projectRemoteUnavailable=0;
 repoName=$( basename "$projectDir" );
 
 # Check if we have a git repo
-if [ ! -d "$projectDir/.git" ]; then
-  echo "${style_yellow}Warning: $projectDir is not a git repository. Not checking for updates.${style_reset}";
-  #exit 1;
+if [[ ! -d "$projectDir/.git" ]]; then
+  repoDiagnosticMessage+="${style_yellow}Warning: $repoName is not a git repository. Not checking for updates.${style_reset} ";
 else
   # Check for updates
-  git fetch --quiet > /dev/null 2>&1 # Hides output as --quiet doesn't silence git fatal errors such as no internet.
+  cd "$projectDir";
+  git fetch --quiet 2> /dev/null # Hides output as --quiet doesn't silence git fatal errors such as no internet.
   let projectRemoteUnavailable=$? # keep this line directly after to git fetch
   
   if [ "$projectRemoteUnavailable" -gt 0 ]; then
-    repoDiagnosticMessage+="${style_red}Warning: Could not fetch updates.${style_reset} ";
+    if [[ ! `git status --porcelain` ]]; then
+      repoDiagnosticMessage+="${style_red}Error: This local git repo might be broken.${style_reset} ";
+    else
+      repoDiagnosticMessage+="${style_yellow}Warning: Could not fetch updates. (probably no network)${style_reset} ";
+    fi
   fi
 
-  if [[ ! -z `git status --porcelain` ]]; then
+  if [[ ! -z `git status --porcelain 2> /dev/null` ]]; then
     repoDiagnosticMessage+="${style_yellow}Your branch has local changes.${style_reset} ";
   fi
 
-  if [[ ! -z `git log ..@{u}` ]]; then
+  if [[ ! -z `git log ..@{u} 2> /dev/null` ]]; then
     repoDiagnosticMessage+="${style_yellow}New comits are available.${style_reset} ";
   fi
 fi # Main repo git checks
@@ -211,10 +215,10 @@ if [ "$SHOW_INTRO" -eq 1 ]; then
   echo ""
   
   # Print some repository information
-  if [[ `figlet "."` && $? -eq 0 ]]; then
+  if [[ $(figlet "." 2> /dev/null ) && $? -eq 0 ]]; then
     # Figlet is installed
     figlet -w "$(tput cols)" -f big " $repoName";
-  elif [[ `toilet "."` && $? -eq 0 ]]; then
+  elif [[ $(toilet "." 2> /dev/null ) && $? -eq 0 ]]; then
     # Toilet is installed
     toilet -f basic "$repoName";
   else
