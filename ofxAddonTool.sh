@@ -327,106 +327,109 @@ function processAddon {
 
     cd $addonsDir/$addonName
 
-    # Parse local information
-    local addonLocalBranch=`git name-rev --name-only HEAD` # ex: master (local branch name)
-    local addonTrackingRemote=`git config branch.$addonLocalBranch.remote` # ex: origin (remote's local name)
-    #local addonRemoteUrl=$(git config remote.$addonTrackingRemote.url) # ex: https://github.com/armadillu/ofxTimeMeasurements
-    local addonRemoteUrl=$(git remote get-url $addonTrackingRemote) # alternative for the above line
-    #local addonRemoteTrackingBranch=$(git rev-parse --symbolic-full-name --abbrev-ref $addonTrackingRemote) # ex: origin/master # Note: I got some unexpected values for some repos. Better not use.
-    local addonRemoteTrackingBranch=$(git rev-parse --symbolic-full-name --abbrev-ref $addonLocalBranch@{upstream}) # ex: origin/master (long version)
-    #local addonRemoteTrackingBranch=$(git symbolic-ref --quiet --short HEAD) # ex: master (short version)
-    
     # Check for a detached head / tracking repo
     local dummyvar=$(git symbolic-ref --quiet --short HEAD) # quiet command, we use the exit code via $?
     #dummyvar=(git symbolic-ref --quiet --short no_branch_like_this); # Debug, uncomment to send exit code 1 to $?
     let addonHasDetachedHead=$? # keeps exit status of previous command. (keep this line after the previous one)
     #addonDetachedHead=$(git rev-parse --abbrev-ref HEAD) #ex: master, if tracking. Hash otherwise.
-    
-    #addonRemoteTrackingBranch=`git config branch.$addonLocalBranch.merge` #ex : refs/heads/master
-    #addonRemoteTrackingBranch=`git symbolic-ref -q HEAD` #ex : refs/heads/master, exit code indicates tracking status.
-
-    #echo "Current branch remote.name = $(git rev-parse --abbrev-ref HEAD)" # ex: master
-    #echo "Entering ${mosaic_addons[$i]} @ $(git status -b -s)";
-    #TRACKING_BRANCH=`git config branch.$LOCAL_BRANCH.merge` # ex: refs/heads/master
-
-    # Check if remote URL is the same
-    if [[ "$addonRemoteUrl" =~ ${addonUrl//https?\:\/\//} ]]; then
-      #addonRemoteIsSame='ok'
-      #addonRemoteIsSameCol=$style_green
-      #addonDiagnosticMessageCol=$style_green
-
-      # Local branch name can be different. Mark green when it's the same.
-      if [[ "$addonLocalBranch" =~ $addonBranch ]]; then
-        addonBranchIsSameCol=$style_green
-      else
-        addonBranchIsSameCol=$style_yellow
-      fi
-
-      # Check if the local branch tracks the right branch
-      if [[ "$addonTrackingRemote/$addonBranch" =~ "$addonRemoteTrackingBranch" ]]; then
-        #addonBranchIsSame="$addonLocalBranch"
-        #addonBranchIsSameCol=$style_green
-        addonRemoteIsSameCol=$style_green
-
-        # Sync with remote(s), updates references
-        # maybe use this instead ? : git remote update
-        git fetch --quiet > /dev/null 2>&1 # Hides output as --quiet doesn't silence git fatal errors such as no internet.
-
-        # Check for network errors
-        let addonRemoteUnavailable=$? # keep this line directly after to git fetch
-
-        # Check for available updates (quick method)
-        lastLocalCommit=`git show --no-notes --format=format:"%H" "$addonBranch" | head -n 1`
-        lastRemoteCommit=`git show --no-notes --format=format:"%H" "$addonTrackingRemote/$addonBranch" | head -n 1`
-        if [ "$lastLocalCommit" != "$lastRemoteCommit" ]; then
-          addonDiagnosticMessage="New commits are available, please pull this repo."
-          addonDiagnosticMessageCol=$style_yellow
-          addonBranchIsSameCol=$style_yellow
-        else
-
-          # Check for diffs (uncomited local changes) (or rather differences with remote ?)
-          #if [[ `git diff --cached --name-only $addonLocalBranch $addonTrackingRemote/$addonBranch` ]]; then # --cached includes uncomited changes
-          if [[ ! -z `git status "--untracked-files=no" "--porcelain"` ]]; then
-            addonDiagnosticMessage="This repo has uncomited local changes."
-            addonDiagnosticMessageCol=$style_yellow
-          fi
-
-        fi
-        # Remote unreachable
-        if [ "$addonRemoteUnavailable" -gt 0 ]; then
-          if [ -z "$addonDiagnosticMessage" ]; then #only set message if not already set
-            addonDiagnosticMessage="The remote is unreachable."
-            addonDiagnosticMessageCol=$style_yellow
-          fi
-        fi
-
-      # Incorrect tracking branch
-      else
-        #echo "Mismatch : $addonLocalBranch is not $addonBranch"
-        #echo "$addonTrackingRemote/$addonBranch VS $addonRemoteTrackingBranch"
-        addonRemoteIsSameCol=$style_red
-        addonDiagnosticMessage="Your local branch tracks a different branch."
-        addonDiagnosticMessageCol=$style_red
-        #addonBranchIsSame="/!\ $addonLocalBranch"
-      fi
-
-    else
-      addonDiagnosticMessage="Your local branch tracks a different repo/url."
-      addonDiagnosticMessageCol=$style_red
-      addonRemoteIsSameCol=$style_red
-      addonBranchIsSameCol=$style_yellow
-    fi
 
     # warn for detached head ? (override other info for GUI only)
     if [ "$addonHasDetachedHead" -gt 0 ]; then
-      addonRemoteIsSameCol=$style_yellow
-      addonRemoteTrackingBranch="Detached head"
+      local addonLocalBranch="Detached!"
+      local addonRemoteIsSameCol=$style_yellow
+      local addonRemoteTrackingBranch="Detached head"
       if [ -z "$addonDiagnosticMessage" ]; then #only set message if not already set
+        local addonDiagnosticMessageCol=$style_red
+        local addonDiagnosticMessage="This local branch is not tracking any remote branch."
+      fi
+    # No detached head
+    else
+      # Parse local information
+      local addonLocalBranch=`git name-rev --name-only HEAD 2> /dev/null` # ex: master (local branch name)
+      local addonTrackingRemote=`git config branch.$addonLocalBranch.remote` # ex: origin (remote's local name)
+      #local addonRemoteUrl=$(git config remote.$addonTrackingRemote.url) # ex: https://github.com/armadillu/ofxTimeMeasurements
+      local addonRemoteUrl=$(git remote get-url $addonTrackingRemote 2> /dev/null) # alternative for the above line
+      #local addonRemoteTrackingBranch=$(git rev-parse --symbolic-full-name --abbrev-ref $addonTrackingRemote) # ex: origin/master # Note: I got some unexpected values for some repos. Better not use.
+      local addonRemoteTrackingBranch=$(git rev-parse --symbolic-full-name --abbrev-ref $addonLocalBranch@{upstream}) # ex: origin/master (long version)
+      #local addonRemoteTrackingBranch=$(git symbolic-ref --quiet --short HEAD) # ex: master (short version)
+      
+      #addonRemoteTrackingBranch=`git config branch.$addonLocalBranch.merge` #ex : refs/heads/master
+      #addonRemoteTrackingBranch=`git symbolic-ref -q HEAD` #ex : refs/heads/master, exit code indicates tracking status.
+
+      #echo "Current branch remote.name = $(git rev-parse --abbrev-ref HEAD)" # ex: master
+      #echo "Entering ${mosaic_addons[$i]} @ $(git status -b -s)";
+      #TRACKING_BRANCH=`git config branch.$LOCAL_BRANCH.merge` # ex: refs/heads/master
+
+      # Check if remote URL is the same
+      if [[ "$addonRemoteUrl" =~ ${addonUrl//https?\:\/\//} ]]; then
+        #addonRemoteIsSame='ok'
+        #addonRemoteIsSameCol=$style_green
+        #addonDiagnosticMessageCol=$style_green
+
+        # Local branch name can be different. Mark green when it's the same.
+        if [[ "$addonLocalBranch" =~ $addonBranch ]]; then
+          addonBranchIsSameCol=$style_green
+        else
+          addonBranchIsSameCol=$style_yellow
+        fi
+
+        # Check if the local branch tracks the right branch
+        if [[ "$addonTrackingRemote/$addonBranch" =~ "$addonRemoteTrackingBranch" ]]; then
+          #addonBranchIsSame="$addonLocalBranch"
+          #addonBranchIsSameCol=$style_green
+          addonRemoteIsSameCol=$style_green
+
+          # Sync with remote(s), updates references
+          # maybe use this instead ? : git remote update
+          git fetch --quiet > /dev/null 2>&1 # Hides output as --quiet doesn't silence git fatal errors such as no internet.
+
+          # Check for network errors
+          let addonRemoteUnavailable=$? # keep this line directly after to git fetch
+
+          # Check for available updates (quick method)
+          lastLocalCommit=`git show --no-notes --format=format:"%H" "$addonBranch" | head -n 1`
+          lastRemoteCommit=`git show --no-notes --format=format:"%H" "$addonTrackingRemote/$addonBranch" | head -n 1`
+          if [ "$lastLocalCommit" != "$lastRemoteCommit" ]; then
+            addonDiagnosticMessage="New commits are available, please pull this repo."
+            addonDiagnosticMessageCol=$style_yellow
+            addonBranchIsSameCol=$style_yellow
+          else
+            # Check for diffs (uncomited local changes) (or rather differences with remote ?)
+            #if [[ `git diff --cached --name-only $addonLocalBranch $addonTrackingRemote/$addonBranch` ]]; then # --cached includes uncomited changes
+            if [[ ! -z `git status "--untracked-files=no" "--porcelain"` ]]; then
+              addonDiagnosticMessage="This repo has uncomited local changes."
+              addonDiagnosticMessageCol=$style_yellow
+            fi
+
+          fi
+          # Remote unreachable
+          if [ "$addonRemoteUnavailable" -gt 0 ]; then
+            if [ -z "$addonDiagnosticMessage" ]; then #only set message if not already set
+              addonDiagnosticMessage="The remote is unreachable."
+              addonDiagnosticMessageCol=$style_yellow
+            fi
+          fi
+
+        # Incorrect tracking branch
+        else
+          #echo "Mismatch : $addonLocalBranch is not $addonBranch"
+          #echo "$addonTrackingRemote/$addonBranch VS $addonRemoteTrackingBranch"
+          addonRemoteIsSameCol=$style_red
+          addonDiagnosticMessage="Your local branch tracks a different branch."
+          addonDiagnosticMessageCol=$style_red
+          #addonBranchIsSame="/!\ $addonLocalBranch"
+        fi
+
+      # Uncorrect remote url
+      else
+        addonDiagnosticMessage="Your local branch tracks a different repo/url."
         addonDiagnosticMessageCol=$style_red
-        addonDiagnosticMessage="This local branch is not tracking any remote branch."
+        addonRemoteIsSameCol=$style_red
+        addonBranchIsSameCol=$style_yellow
       fi
     fi
 
+  # Directory not found
   else
     addonDiagnosticMessageCol=$style_red
     addonDiagnosticMessage="This addon is not installed."
