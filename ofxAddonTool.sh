@@ -48,6 +48,7 @@ style_reset=$(tput sgr 0)
 USER_ACTION="";
 INTERACTIVE=1;
 SHOW_INTRO=1;
+VERBOSE=0;
 for arg in "$@"; do
   if [[ -z "$USER_ACTION" ]]; then # Ignores actions when another is already defined.
     if [ "$arg" = "--install" ]; then
@@ -66,6 +67,8 @@ for arg in "$@"; do
     INTERACTIVE=0;
   elif [ "$arg" = "--no-intro" ]; then
     SHOW_INTRO=0;
+  elif [ "$arg" = "--verbose" ]; then
+    VERBOSE=1;
   fi
 done
 
@@ -122,12 +125,13 @@ if [ "$USER_ACTION" = "help" ]; then
   echo "     --check    Shows the current stat of your OpenFrameworks' addon folder.";
   echo "     --install  Installs the required addons. (ignores if already installed)"
   echo "     --update   Tries to pull remote changes, if any are available. (only if your local branch is clean)"
-  echo "     --sync     Synchronizes with addons.make using the config from addons.txt"
+  echo "     --sync     Synchronizes with addons.make using the config from addons.txt."
   echo "     --help     Shows the current status of your OpenFrameworks' addon folder."
   echo "";
   echo "Optional arguments :";
   echo "     --yes      Disable user interactions (for scripts).";
   echo "     --no-intro Don't show the intro banner.";
+  echo "     --verbose  Show extra debug information.";
   echo "";
   exit 0;
 fi # Endif HELP
@@ -242,11 +246,16 @@ fi # end show intro banner
 # Set default action
 if [[ -z "$USER_ACTION" ]]; then
   USER_ACTION="check";
-  echo "${style_yellow}Warning: Unrecognized script action. Continueing with default behaviour \"${USER_ACTION}\".${style_reset}";
+  if [[ "$VERBOSE" -eq 1 ]] ; then
+    echo "${style_yellow}Warning: Unrecognized script action. Continueing with default behaviour \"${USER_ACTION}\".${style_reset}";
+    echo "";
+  fi;
 else
-  echo "Starting addons action: $USER_ACTION";
+  if [[ "$VERBOSE" -eq 1 ]] ; then
+    echo "Starting addons action: $USER_ACTION";
+    echo "";
+  fi;
 fi
-echo "";
 
 
 # Sync with addons.make ?
