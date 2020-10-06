@@ -258,14 +258,21 @@ let availableWidth=`tput cols`; # in characters (not pixels)
 let availableWidth=$availableWidth-5; # removes 5 column separators
 # Values scale : 0=0% width, 1.0 is 100% width
 # Rule : nb_cols*col_width + nb_cols2*col2_width + ... = 1.0
+# BC method
 #let COL_TINY=$(echo "($availableWidth * 0.04) / 1");
 #let COL_SMALL=$(echo "scale=0; ($availableWidth * 0.10) / 1" | bc );
 #let COL_MEDIUM=$(echo "scale=0; ($availableWidth * 0.14) / 1" | bc );
 #let COL_LARGE=$(echo "scale=0; ($availableWidth * 0.22) / 1" | bc );
-let COL_TINY=$(awk "BEGIN {print int(($availableWidth * 0.04) / 1)}");
-let COL_SMALL=$(awk "BEGIN {print int(($availableWidth * 0.10) / 1)}");
-let COL_MEDIUM=$(awk "BEGIN {print int(($availableWidth * 0.14) / 1)}");
-let COL_LARGE=$(awk "BEGIN {print int(($availableWidth * 0.22) / 1)}");
+# AWK method
+#let COL_TINY=$(awk "BEGIN {print int(($availableWidth * 0.04) / 1)}");
+#let COL_SMALL=$(awk "BEGIN {print int(($availableWidth * 0.10) / 1)}");
+#let COL_MEDIUM=$(awk "BEGIN {print int(($availableWidth * 0.14) / 1)}");
+#let COL_LARGE=$(awk "BEGIN {print int(($availableWidth * 0.22) / 1)}");
+# POSIX method
+let COL_TINY=$(echo "$(($availableWidth * 4/100))");
+let COL_SMALL=$(echo "$(($availableWidth * 10/100))");
+let COL_MEDIUM=$(echo "$(($availableWidth * 14/100))");
+let COL_LARGE=$(echo "$(($availableWidth * 22/100))");
 
 PRINTF_TABLE_LINE="%-${COL_MEDIUM}.${COL_MEDIUM}s | %-${COL_LARGE}.${COL_LARGE}s | %-${COL_SMALL}.${COL_SMALL}s | %-${COL_SMALL}.${COL_SMALL}s | %-${COL_MEDIUM}.${COL_MEDIUM}s | %-${COL_LARGE}.${COL_LARGE}s \n";
 
