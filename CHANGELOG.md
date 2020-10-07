@@ -4,6 +4,10 @@ ofxAddonTool CHANGELOG
 ### Version 0.3_alpha (master):
 - Fix: Table layout on Windows
 - Fix: Banner takes full width
+- Improves the detection of errors
+- Fixes for main project repo showing incorrect git information in some configurations
+- Implements the option to install uninstalled repos
+- Feature: Shows working information while execting
 
 ### Version 0.2_alpha (28-09-2020):
 - Improves display layout
