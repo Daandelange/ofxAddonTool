@@ -6,8 +6,10 @@ ofxAddonTool CHANGELOG
 - Fix: Banner takes full width
 - Improves the detection of errors
 - Fixes for main project repo showing incorrect git information in some configurations
-- Implements the option to install uninstalled repos
+- Implements the option to install uninstalled addons
 - Feature: Shows working information while execting
+- Implements th option to update addons
+- Removed some unused variables
 
 ### Version 0.2_alpha (28-09-2020):
 - Improves display layout

@@ -42,6 +42,9 @@ VERSION_NUMBER="0.3_alpha";
 style_red=$(tput setaf 1)
 style_green=$(tput setaf 2)
 style_yellow=$(tput setaf 3)
+#style_cyan=$(tput setaf 7)
+style_bold=$(tput bold)
+style_light=$(tput dim)
 style_reset=$(tput sgr 0)
 
 # Helper function
@@ -51,19 +54,19 @@ function showLoadMessage {
   if [[ -z "$taskMessage" ]]; then
     taskMessage="Loading"; # Default message
   fi
-  echo -ne "$taskMessage\r"
+  echo -ne " ${style_light}$taskMessage${style_reset}\r"
 
   while kill -0 $taskPid 2>/dev/null; do
   #while wait 0.3s $taskPid 2>/dev/null; do
     sleep 0.3
-    echo -ne "$taskMessage.\r"
+    echo -ne " ${style_light}$taskMessage.${style_reset}\r"
     sleep 0.3
-    echo -ne "$taskMessage..\r"
+    echo -ne " ${style_light}$taskMessage..${style_reset}\r"
     sleep 0.3
-    echo -ne "$taskMessage...\r"
+    echo -ne " ${style_light}$taskMessage...${style_reset}\r"
     sleep 0.3
     echo -ne "\r\033[K"
-    echo -ne "$taskMessage\r"
+    echo -ne " ${style_light}$taskMessage${style_reset}\r"
   done
 
   # forward exit code of process
@@ -134,7 +137,6 @@ if [ "$USER_ACTION" = "help" ]; then
     toilet -t -f big "ofxAddonTool";
   else
     # No ascii art tool is installed
-    #echo "ofxAddonTool";
     echo "        __                   _     _          _______          _ ";
     echo "       / _|         /\      | |   | |        |__   __|        | |";
     echo "  ___ | |___  __   /  \   __| | __| | ___  _ __ | | ___   ___ | |";
@@ -145,7 +147,7 @@ if [ "$USER_ACTION" = "help" ]; then
   fi
   
   echo "An utility for managing OpenFrameworks addon dependencies for a given project."
-  echo "Version ${VERSION_NUMBER}";
+  echo "Version ${VERSION_NUMBER}.";
   echo "";
   echo "Usage: ofxAddonTool.sh [--yes] [--no-intro] --ACTION";
   echo "";
@@ -206,8 +208,8 @@ if [[ ! -d "$projectDir/.git" ]]; then
 else
   # Check for updates
   cd "$projectDir";
-  git fetch --quiet 2> /dev/null # Hides output as --quiet doesn't silence git fatal errors such as no internet.
-  let projectRemoteUnavailable=$? # keep this line directly after to git fetch
+  git fetch --quiet 2> /dev/null; # Hides output as --quiet doesn't silence git fatal errors such as no internet.
+  let projectRemoteUnavailable=$?; # keep this line directly after to git fetch
   
   # No internet connection ?
   if [ "$projectRemoteUnavailable" -gt 0 ]; then
@@ -219,12 +221,35 @@ else
     fi
   fi
 
+  # Check for any modified project files
   if [[ ! -z `git status --porcelain 2> /dev/null` ]]; then
-    repoDiagnosticMessage+="${style_yellow}Your branch has local changes.${style_reset} ";
+    # On update
+    if [ "$USER_ACTION" = "update" ]; then
+      repoDiagnosticMessage+="${style_red}Your branch has local changes, not updating to prevent conflicts. Clean the repo and try again.${style_reset} ";
+    # On check
+    else
+      repoDiagnosticMessage+="${style_yellow}Your branch has local changes.${style_reset} ";
+    fi
   fi
 
+  # Check if new commits are available
   if [[ ! -z `git log ..@{u} 2> /dev/null` ]]; then
-    repoDiagnosticMessage+="${style_yellow}New comits are available.${style_reset} ";
+    # Updating Project
+    if [ "$USER_ACTION" = "update" ]; then
+      git pull --no-commit 2> /dev/null & showLoadMessage "Updating $addonName";
+
+      # Error updating ?
+      if [ "$?" -gt 0 ]; then
+        repoDiagnosticMessage+="${style_red}Error updating.${style_reset} ";
+      # Update successfull
+      else
+        repoDiagnosticMessage+="${style_green}Update successful !${style_reset} ";
+      fi
+    # Regular check
+    else
+      repoDiagnosticMessage+="${style_yellow}New comits are available.${style_reset} ";
+    fi
+
   fi
 fi # Main repo git checks
 
@@ -267,11 +292,11 @@ if [ "$SHOW_INTRO" -eq 1 ]; then
   else
     echo "Diagnostic : ${style_green}The base repo is clean.${style_reset}";
   fi
-  echo " "
+  echo "";
   echo "Addons configuration file : $curDir/addons.txt";
   let numInstalledAddons=$(ls -l $addonsDir | grep -v ^ofx | wc -l | xargs); # xargs strips spaces
   echo "Detected addons directory : $addonsDir ($numInstalledAddons installed addons)";
-  echo " "
+  echo "";
   #echo "Working from $repoName";
 fi # end show intro banner
 
@@ -348,17 +373,15 @@ function processAddon {
   local addonBranchIsSameCol=$style_reset
   local addonHasLocalChanges='-'
   #addonHasLocalChangesCol=$style_normal
-  local addonDiagnosticMessage=""
-  local addonDiagnosticMessageCol=$style_reset
+  local addonDiagnosticMessage=""; # Only one to include color information (not stripped).
 
   # Install ?
   if [ "$USER_ACTION" = "install" ]; then
     # Already installed ?
     if [ -d "$addonsDir/$addonName" ]; then
-      addonDiagnosticMessage+="Already installed. ";
-      addonDiagnosticMessageCol=$style_green;
+      addonDiagnosticMessage+="${$style_green}Already installed.${style_reset} ";
       if [[ "$VERBOSE" -eq 1 ]] ; then
-        echo "${style_green}Already installed $addonName, not installing.${style_reset}";
+        echo "${style_green}Verbose: Already installed $addonName, not installing.${style_reset}";
       fi
     # Please install !
     else
@@ -374,16 +397,14 @@ function processAddon {
 
       # Install failed ?
       if [ "$addonWasInstalled" -gt 0 ]; then
-        addonDiagnosticMessage+="Failed to install. ";
-        addonDiagnosticMessageCol=$style_red;
+        addonDiagnosticMessage+="${style_red}Failed to install.${style_reset} ";
         if [[ "$VERBOSE" -eq 1 ]] ; then
           echo " ${style_red}Failed! (error $addonWasInstalled)${style_reset}";
         fi
         # Remember the fail (todo)
       # Install was successful
       else
-        addonDiagnosticMessage+="Successfully installed. ";
-        addonDiagnosticMessageCol=$style_green;
+        addonDiagnosticMessage+="${style_green}Successfully installed.${style_reset} ";
         if [[ "$VERBOSE" -eq 1 ]] ; then
           echo " ${style_green}Done!${style_reset}";
         fi
@@ -411,10 +432,7 @@ function processAddon {
       local addonLocalBranch="Detached!";
       local addonRemoteIsSameCol=$style_yellow;
       local addonRemoteTrackingBranch="Detached head";
-      if [ -z "$addonDiagnosticMessage" ]; then #only set message if not already set
-        local addonDiagnosticMessageCol=$style_red;
-        local addonDiagnosticMessage+="This local branch is not tracking any remote branch. ";
-      fi
+      local addonDiagnosticMessage+="This local branch is not tracking any remote branch. ";
     # No detached head
     else
       # Parse local information
@@ -437,7 +455,6 @@ function processAddon {
       if [[ "$addonRemoteUrl" =~ ${addonUrl//https?\:\/\//} ]]; then
         #addonRemoteIsSame='ok'
         #addonRemoteIsSameCol=$style_green
-        #addonDiagnosticMessageCol=$style_green
 
         # Local branch name can be different. Mark green when it's the same.
         if [[ "$addonLocalBranch" =~ $addonBranch ]]; then
@@ -465,36 +482,57 @@ function processAddon {
           # Check for available updates (quick method)
           lastLocalCommit=`git show --no-notes --format=format:"%H" "$addonBranch" | head -n 1`
           lastRemoteCommit=`git show --no-notes --format=format:"%H" "$addonTrackingRemote/$addonBranch" | head -n 1`
+          
           # Updates are available
-          if [ "$lastLocalCommit" != "$lastRemoteCommit" ]; then
-            addonDiagnosticMessage+="New commits are available, please pull this repo. "
-            addonDiagnosticMessageCol=$style_yellow
-            addonBranchIsSameCol=$style_yellow
-          # Repo is up to date
-          else
-            # Check for diffs with remote, allowing untracked files
+          if [ "$lastLocalCommit" != "$lastRemoteCommit" ]; then # todo = replace this with git log, see poject method
+            
+            # Check for diffs with remote, allowing untracked files. Don't update conflictable repos.
             #if [[ `git diff --cached --name-only $addonLocalBranch $addonTrackingRemote/$addonBranch` ]]; then # --cached includes uncomited changes
             if [[ ! -z `git status "--untracked-files=no" "--porcelain"` ]]; then
-              addonDiagnosticMessage+="This repo has uncomited local changes. "
-              addonDiagnosticMessageCol=$style_yellow
+              if [ "$USER_ACTION" = "update" ]; then
+                addonDiagnosticMessage+="${style_red}Updates available, but the working directory is not clean. Not updating to prevent conflicts.${style_reset} ";
+              else
+                addonDiagnosticMessage+="${style_yellow}This repo has uncomited local changes.${style_reset} ";
+              fi
             # else
             #   # Check for untracked files
             #   if [[ ! -z `git status "--untracked-files=normal" "--porcelain"` ]]; then
-            #     addonDiagnosticMessage+="This repo has additional untracked files. "
-            #     # Only replace color if not already set.
-            #     if [ -z "$addonDiagnosticMessageCol" ]; then
-            #       addonDiagnosticMessageCol=$style_green
-            #     fi
+            #     addonDiagnosticMessage+="${style_green}This repo has additional untracked files.${style_reset} "
             #   fi
-            fi
+            # We got a clean working repo
+            else
+              # Updating
+              if [ "$USER_ACTION" = "update" ]; then
+                git pull --no-commit 1> /dev/null 2> /dev/null & showLoadMessage "Updating $addonName";
 
+                # Error updating ?
+                if [ "$?" -gt 0 ]; then
+                  addonDiagnosticMessage+="${style_red}Error updating.${style_reset} ";
+                # Update successfull
+                else
+                  addonDiagnosticMessage+="${style_green}Update successful !${style_reset} ";
+                fi
+              #fi
+              # Regular check
+              else
+                addonDiagnosticMessage+="${style_yellow}New commits are available, please pull this repo.${style_reset} ";
+                addonBranchIsSameCol=$style_yellow;
+              fi
+            fi
+          # Repo is up to date
+          else
+            # Only notify if updating
+            if [ "$USER_ACTION" = "update" ]; then
+              addonDiagnosticMessage+="${style_green}Already up-to-date.${style_reset} ";
+            # In verbose mode, show OK diagnostic
+            elif [ "$VERBOSE" -eq 1 ]; then
+              addonDiagnosticMessage+="${style_green}Clean and up-to-date.${style_reset} ";
+            fi
           fi
-          # Remote unreachable
+
+          # Remote unreachable (still use offline cached data for check)
           if [ "$addonRemoteUnavailable" -gt 0 ]; then
-            #if [ -z "$addonDiagnosticMessage" ]; then #only set message if not already set
-              addonDiagnosticMessage+="The remote is unreachable. "
-              addonDiagnosticMessageCol=$style_yellow
-            #fi
+            addonDiagnosticMessage+="${style_yellow}The remote is unreachable.${style_reset} ";
           fi
 
         # Incorrect tracking branch
@@ -502,15 +540,13 @@ function processAddon {
           #echo "Mismatch : $addonLocalBranch is not $addonBranch"
           #echo "$addonTrackingRemote/$addonBranch VS $addonRemoteTrackingBranch"
           addonRemoteIsSameCol=$style_red
-          addonDiagnosticMessage+="Your local branch tracks a different branch. "
-          addonDiagnosticMessageCol=$style_red
+          addonDiagnosticMessage+="${style_red}Your local branch tracks a different branch.${style_reset} ";
           #addonBranchIsSame="/!\ $addonLocalBranch"
         fi
 
       # Uncorrect remote url
       else
-        addonDiagnosticMessage+="Your local branch tracks a different repo/url. "
-        addonDiagnosticMessageCol=$style_red
+        addonDiagnosticMessage+="${style_red}Your local branch tracks a different repo/url.${style_reset} "
         addonRemoteIsSameCol=$style_red
         addonBranchIsSameCol=$style_yellow
       fi
@@ -518,10 +554,9 @@ function processAddon {
 
   # Directory not found
   else
-    addonDiagnosticMessageCol=$style_red
-    addonDiagnosticMessage+="This addon is not installed. "
-    addonBranchIsSameCol=$style_red
-    addonLocalBranch="-not installed-"
+    addonDiagnosticMessage+="${style_red}This addon is not installed.${style_reset} ";
+    addonBranchIsSameCol=$style_red;
+    addonLocalBranch="-not installed-";
   fi
 
   # output table line with info
@@ -529,21 +564,20 @@ function processAddon {
   #printf "%-30s | %-50s | %-16s | ${addonExistsCol}%-16s${style_reset} | ${addonRemoteIsSameCol}%-16s${style_reset} | ${addonBranchIsSameCol}%-16s${style_reset} | ${addonHasLocalChangesCol}%-16s${style_reset} | %-16s " "$addonName" "$addonUrl" "$addonBranch" "$addonExists" "$addonRemoteIsSame" "$addonBranchIsSame" "$addonHasLocalChanges"
   
   #printf "%-20s | %-40s | %-16s | ${addonBranchIsSameCol}%-16s${style_reset} | ${addonRemoteIsSameCol}%-16s${style_reset} | ${addonDiagnosticMessageCol}%-16s${style_reset} " "${addonName:0:16}" "${addonUrl/https:\/\//}" "$addonBranch" "$addonLocalBranch" "$addonRemoteTrackingBranch" "$addonDiagnosticMessage"
-  local PRINTF_TABLE_LINE_COLORED="%-${COL_MEDIUM}.${COL_MEDIUM}s | %-${COL_LARGE}.${COL_LARGE}s | %-${COL_SMALL}.${COL_SMALL}s | ${addonBranchIsSameCol}%-${COL_SMALL}.${COL_SMALL}s${style_reset} | ${addonRemoteIsSameCol}%-${COL_MEDIUM}.${COL_MEDIUM}s${style_reset} | ${addonDiagnosticMessageCol}%s${style_reset} \n";
+  local PRINTF_TABLE_LINE_COLORED="%-${COL_MEDIUM}.${COL_MEDIUM}s | %-${COL_LARGE}.${COL_LARGE}s | %-${COL_SMALL}.${COL_SMALL}s | ${addonBranchIsSameCol}%-${COL_SMALL}.${COL_SMALL}s${style_reset} | ${addonRemoteIsSameCol}%-${COL_MEDIUM}.${COL_MEDIUM}s${style_reset} | %s${style_reset}\n";
   printf "$PRINTF_TABLE_LINE_COLORED"  "${addonName}" "${addonUrl/https:\/\//}" "$addonBranch" "${addonLocalBranch}" "${addonRemoteTrackingBranch}" "${addonDiagnosticMessage}"
 
 }
 
 #set -ex
-while read addon;
-do
+while read addon; do
   # ignore commented addons in addons.txt
   if (echo $addon | grep -q '#'); then
     ignoringName=`echo ${addon/\#/} | grep "^ofx" | cut -f1 -d ' '`;
     if [[ ! -z "$ignoringName" && "$VERBOSE" -eq 1 ]] ; then
       echo "Verbose: Ignoring commented addon : $ignoringName"
     fi
-    # Ignore addon
+    # Ignore addon or empty line
     continue;
   fi
   # Skip empty lines.
