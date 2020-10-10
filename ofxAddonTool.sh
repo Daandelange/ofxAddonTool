@@ -75,6 +75,37 @@ function showLoadMessage {
   #return $?;
 };
 
+# Function to filter lines in addons.txt
+function filterAddonLine {
+  # parse argument
+  local addonLine=$1;
+
+  # ignore commented lines
+  if [[ ! -z `echo "$addonLine" | grep '#'` ]]; then
+    ignoringName=`echo ${addonLine/\#/} | grep "^ofx" | cut -f1 -d ' '`;
+    if [[ ! -z "$ignoringName" && "$VERBOSE" -eq 1 ]] ; then
+      echo "Verbose: Ignoring commented addon : $ignoringName"
+    fi
+    # Ignore addon or empty line
+    return 255;
+  fi
+
+  # Skip empty lines.
+  strippedAddon="${addonLine/ /}" # strip spaces
+  strippedAddon="${strippedAddon/\t/}" # strip tabs
+  strippedAddon="${strippedAddon/\r/}" # strip return
+  strippedAddon="${strippedAddon/\n/}" # strip newline
+
+  if [ -z "$strippedAddon" ]; then
+    #echo "Skipping empty line !"
+    #continue;
+    return 255;
+  fi
+
+  #echo "$addonLine";
+  return 0; # success indicator
+}
+
 # Parse parameters / options
 USER_ACTION="";
 INTERACTIVE=1;
@@ -149,17 +180,17 @@ if [ "$USER_ACTION" = "help" ]; then
   echo "An utility for managing OpenFrameworks addon dependencies for a given project."
   echo "Version ${VERSION_NUMBER}.";
   echo "";
-  echo "Usage: ofxAddonTool.sh [--yes] [--no-intro] --ACTION";
+  echo "Usage: ofxAddonTool.sh [--yes] [--no-intro] [--verbose] --ACTION";
   echo "";
   echo "--ACTION      Action to perform :";
   echo "     --check    Shows the current stat of your OpenFrameworks' addon folder.";
   echo "     --install  Installs the required addons. (ignores if already installed)"
   echo "     --update   Tries to pull remote changes, if any are available. (only if your local branch is clean)"
-  echo "     --sync     Synchronizes with addons.make using the config from addons.txt."
+  echo "     --sync     Synchronizes with addons.make using the config from addons.txt (with automatic backup creation)."
   echo "     --help     Shows the current status of your OpenFrameworks addon folder."
   echo "";
   echo "Optional arguments :";
-  echo "     --yes      Disable user interactions (for scripts).";
+  echo "     --yes      Disable user interactions (for scripting usage).";
   echo "     --no-intro Don't show the intro banner.";
   echo "     --verbose  Show extra debug information.";
   echo "";
@@ -167,7 +198,7 @@ if [ "$USER_ACTION" = "help" ]; then
 fi # Endif HELP
 
 # Get project information
-curDir=`pwd`; # ofxAdonTool dir
+curDir=`pwd`; # ofxAddonTool dir
 let dirSearchLimit=3;
 dirSearchPath="";
 if [ `basename "$curDir"` = "ofxAddonTool" ]; then
@@ -272,7 +303,7 @@ if [ "$SHOW_INTRO" -eq 1 ]; then
   echo ""
   echo "Hello, this script will scan your addons folder and check if all the necessary addons are correctly installed."
   echo "If some fields are marked yellow/red, they might need manual attention."
-  echo "Note: this script is in alpha phase. Only tested on osx and linux for now."
+  echo "Note: this script is in alpha phase ($VERSION_NUMBER), feedback is appreciated."
   echo ""
   
   # Print some repository information
@@ -316,9 +347,98 @@ fi
 
 # Sync with addons.make ?
 if [ "$USER_ACTION" = "sync" ]; then
-  echo "Syncing is not implemented yet. Bye.";
+  
+  # Does addons.txt exist ?
+  if [ ! -f "${curDir}/addons.txt" ]; then
+    echo "${style_red}Error: ${curDir}/addons.txt doesn't exist, cannot sync !${style_reset}";
+    exit 128;
+  fi
+
+  # Check for an existing addons.make
+  if [ -f "${projectDir}/addons.make" ]; then
+
+    # Check if it was created by ofxAddonTool
+    #grep -n . "${projectDir}/addons.make" | grep "^1:.*ofxAddonTool";
+    if [[ -z `grep -n . "${projectDir}/addons.make" | grep "^1:.*ofxAddonTool"` ]]; then # error with too many arguments
+      if [[ "$VERBOSE" -eq 1 ]] ; then
+        echo "Verbose: Existing addons.make detected. Making a backup of ${repoName}/addons.make.";
+      fi
+
+      # Check filename for addons_backup.make
+      backupName=$(date +"addons_backup-%Y%m%d.make");
+      let incr=1;
+      while [ -f "${projectDir}/${backupName}" ]; do
+        backupName=$(date +"addons_backup-%Y%m%d-$incr.make");
+        incr=$[$incr + 1];
+      done
+
+      if [[ "$VERBOSE" -eq 1 ]] ; then
+        echo "Verbose: Name of the backup : ${repoName}/${backupName}.";
+      fi
+
+      # Make a backup
+      cp "${projectDir}/addons.make" "${projectDir}/${backupName}";
+      # Did it fail ?
+      if [ $? -gt 0 ]; then
+        echo "${style_red}Error backing up ${repoName}/addons.make. Not continueing.${style_reset}";
+        exit 128;
+      # Success
+      else
+        # Append 1 info line saying it was duplicated by ofxAddonTool
+        echo -e "# Automatic backup created by ofxAddonTool prior to overwriting addon.make on $(date +"%d-%m-%Y").\n$(cat ${projectDir}/${backupName})" > "${projectDir}/${backupName}";
+        
+        # Notify success
+        echo "${style_green}A backup of your previous addons.make was created at ${repoName}/${backupName}.${style_reset}";
+      fi
+
+    # File was produced by ofxAddonTool
+    else
+      if [[ "$VERBOSE" -eq 1 ]] ; then
+        echo "Verbose: addons.make detected and made by ofxAddonTool. Proceeding without making a backup.";
+      fi
+    fi
+
+  # No addons.make, directly create it !
+  else
+    if [[ "$VERBOSE" -eq 1 ]] ; then
+      echo "Verbose: ${repoName}/addons.make doesn't exist yet. Directly creating it.";
+    fi
+    # Continue below
+  fi
+
+  # From this point there's either a backup of addons.make or no need to back it up.
+  addonsMakeFile=;
+  if [[ "$VERBOSE" -eq 1 ]] ; then
+    echo "Verbose: Detected target location: ${projectDir}/addons.make.";
+  fi
+
+  # Compose new addons.make
+  addonsDotMakeContent="# Generated by ofxAddonTool on $(date +"%d-%m-%Y").\n";  # First line of addons.make must hold "ofxAddonTool", to detect if it was self-made or not.
+  addonsDotMakeContent+="# This file reflects the more detailed addon configuration in .${curDir/$projectDir/}/addons.txt.\n"; # Prints the relative path
+  addonsDotMakeContent+="# You can use .${curDir/$projectDir/}/ofxAddonTool.sh to re-sync the required addons, or to check that you are tracking the correct remote branch.\n";
+
+  # Loop addons.txt
+  while read addon; do
+    filterAddonLine "$addon";
+    if [ $? -eq 0 ]; then
+      #local addonName=$(echo $addon | cut -f1 -d' ')
+      addonsDotMakeContent+=$(echo $addon | cut -f1 -d' ');
+      addonsDotMakeContent+="\n";
+    fi
+  done < "$curDir/addons.txt";
+
+  # Write addons.make
+  echo -e "${addonsDotMakeContent}" > "${projectDir}/addons.make";
+
+  # Failed writing to file ?
+  if [ $? -gt 0 ]; then
+    echo "${style_red}Error: Failed writing to addons.make...${style_reset}";
+  else
+    echo "${style_green}Syncing successfull ! Addons were written to ${repoName}/addons.make.${style_reset}";
+  fi
   exit 0;
 fi
+# End SYNC action
 
 
 # Table formatting
@@ -571,27 +691,10 @@ function processAddon {
 
 #set -ex
 while read addon; do
-  # ignore commented addons in addons.txt
-  if (echo $addon | grep -q '#'); then
-    ignoringName=`echo ${addon/\#/} | grep "^ofx" | cut -f1 -d ' '`;
-    if [[ ! -z "$ignoringName" && "$VERBOSE" -eq 1 ]] ; then
-      echo "Verbose: Ignoring commented addon : $ignoringName"
-    fi
-    # Ignore addon or empty line
-    continue;
+  filterAddonLine "$addon";
+  if [ $? -eq 0 ]; then
+    processAddon "$addon";
   fi
-  # Skip empty lines.
-  strippedAddon="${addon/ /}" # strip spaces
-  strippedAddon="${strippedAddon/\t/}" # strip tabs
-  strippedAddon="${strippedAddon/\r/}" # strip return
-  strippedAddon="${strippedAddon/\n/}" # strip newline
-  if [ -z "$strippedAddon" ]; then
-    #echo "Skipping empty line !"
-    continue;
-  fi
-
-  processAddon "$addon";
-  #echo ""
 done < "$curDir/addons.txt"
 
 echo "";
