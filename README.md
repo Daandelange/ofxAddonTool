@@ -1,7 +1,7 @@
 ofxAddonTool
 ============
 ![ofxAddonTool](./ofxaddons_thumbnail.png)  
-Bash script for managing your OpenFrameworks addon dependencies using git using a project-specific configuration file.  
+Bash script for managing your OpenFrameworks addon dependencies using git and a project-specific configuration file.  
 ![ofxAddonTool Screenshot](./ofxAddonTool_screenshot.png)  
 
 Introduction

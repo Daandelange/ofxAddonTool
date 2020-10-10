@@ -37,7 +37,7 @@
 #set -ex # <-- useful for debugging, shows the lines being executed during execution
 #set -e  # <-- Stop script on any error
 
-VERSION_NUMBER="0.3_alpha";
+VERSION_NUMBER="0.4_alpha";
 
 # Terminal color definitions
 style_red=$(tput setaf 1)
@@ -551,9 +551,12 @@ function processAddon {
     # warn for detached head ? (override other info for GUI only)
     if [ "$addonHasDetachedHead" -gt 0 ]; then
       local addonLocalBranch="Detached!";
-      local addonRemoteIsSameCol=$style_yellow;
+      local addonBranchIsSameCol=$style_red;
+      
       local addonRemoteTrackingBranch="Detached head";
-      local addonDiagnosticMessage+="This local branch is not tracking any remote branch. ";
+      local addonRemoteIsSameCol=$style_yellow;
+
+      local addonDiagnosticMessage+="${style_yellow}This local branch is not tracking any remote branch.${style_reset} ";
     # No detached head
     else
       # Parse local information
