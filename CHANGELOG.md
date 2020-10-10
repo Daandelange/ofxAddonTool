@@ -8,8 +8,10 @@ ofxAddonTool CHANGELOG
 - Fixes for main project repo showing incorrect git information in some configurations
 - Implements the option to install uninstalled addons
 - Feature: Shows working information while execting
-- Implements th option to update addons
+- Implements the option to update addons
 - Removed some unused variables
+- Implements the option to sync addons.txt --> addons.make
+- Added screenshot to the readme
 
 ### Version 0.2_alpha (28-09-2020):
 - Improves display layout
