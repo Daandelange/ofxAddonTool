@@ -619,8 +619,8 @@ function processAddon {
           let addonRemoteUnavailable=$? # keep this line directly after to git fetch
 
           # Check for available updates (quick method)
-          lastLocalCommit=`git show --no-notes --format=format:"%H" "$addonBranch" | head -n 1`;
-          lastRemoteCommit=`git show --no-notes --format=format:"%H" "$addonTrackingRemote/$addonBranch" | head -n 1`;
+          lastLocalCommit=`git show --no-notes --format=format:"%H" "${addonLocalBranch}" | head -n 1`;
+          lastRemoteCommit=`git show --no-notes --format=format:"%H" "${addonTrackingRemote}/${addonBranch}" | head -n 1`;
           let addonUpdatesAvailable=0;
           if [[ "$lastLocalCommit" != "$lastRemoteCommit" ]]; then # todo = replace this with git log, see poject method
             let addonUpdatesAvailable=1;

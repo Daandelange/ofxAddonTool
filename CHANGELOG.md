@@ -1,7 +1,7 @@
 ofxAddonTool CHANGELOG
 ======================
 ### Version 0.5 (master)
-- WIP
+- Fix: Local branch changes were using the remote tracking branch instead of the local branch name, trowing errors then they were different.
 
 ### Version 0.4_alpha (05-12-2020):
 - Fix: Fixed how the project folder is detected : it now looks for addons.txt in the root of your project
