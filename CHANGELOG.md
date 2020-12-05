@@ -1,7 +1,13 @@
 ofxAddonTool CHANGELOG
 ======================
-### Version 0.4_alpha (master):
+### Version 0.5 (master)
 - WIP
+
+### Version 0.4_alpha (05-12-2020):
+- Fix: Fixed how the project folder is detected : it now looks for addons.txt in the root of your project
+- Fix: The script now also looks for your addons folder in `../../`, allowing the script to run from within the oF addons folder too
+- Clarified the setup in the readme
+- Typos
 
 ### Version 0.3_alpha (10-10-2020):
 - Fix: Table layout on Windows

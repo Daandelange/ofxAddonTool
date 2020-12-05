@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# ofxAddonTool is am addon dependency manager for OpenFrameworks projects.
+# ofxAddonTool is an addon dependency manager for OpenFrameworks projects.
 # It works together with an addons.txt as config file.
 # Place this script in your oF project's root, or any subfolder.
+# Your custom addons.txt is to be placed in your oF project root, next to addons.mk if you have one.
 
 # - - - -
 # MIT License
@@ -37,7 +38,7 @@
 #set -ex # <-- useful for debugging, shows the lines being executed during execution
 #set -e  # <-- Stop script on any error
 
-VERSION_NUMBER="0.4_alpha";
+VERSION_NUMBER="0.5_alpha";
 
 # Terminal color definitions
 style_red=$(tput setaf 1)
@@ -184,11 +185,11 @@ if [ "$USER_ACTION" = "help" ]; then
   echo "Usage: ofxAddonTool.sh [--yes] [--no-intro] [--verbose] --ACTION";
   echo "";
   echo "--ACTION      Action to perform :";
-  echo "     --check    Shows the current stat of your OpenFrameworks' addon folder.";
+  echo "     --check    Shows the current state of your OpenFrameworks' addon folder.";
   echo "     --install  Installs the required addons. (ignores if already installed)";
   echo "     --update   Tries to pull remote changes, if any are available. (only if your local branch is clean)";
   echo "                  Any missing addons will also be installed.";
-  echo "     --sync     Synchronizes with addons.make using the config from addons.txt (with automatic backup creation).";
+  echo "     --sync     Synchronizes the content of addons.txt into addons.make (with automatic backup creation).";
   echo "     --help     Shows the current status of your OpenFrameworks addon folder.";
   echo "";
   echo "Optional arguments :";
@@ -208,16 +209,26 @@ if [ `basename "$curDir"` = "ofxAddonTool" ]; then
   dirSearchPath="../";
 fi
 # Search for project path
-while [ "$dirSearchLimit" -gt 0 ]; do
+while [ "${dirSearchLimit}" -gt 0 ]; do
   # Detects a project by going down to the OF folder then looking for an addons folder
-  if [ -d "${curDir}/${dirSearchPath}../../../addons" ]; then
+  # if [ -d "${curDir}/${dirSearchPath}../../../addons" ]; then
+  #   projectDir=$(realpath "${curDir}/${dirSearchPath}");
+  #   echo "Found OF/addons ! (`realpath ${projectDir}`)";
+  #   break;
+  # else
+  #   echo "Ignoring=`basename $(realpath ${curDir}/${dirSearchPath})`";
+  #   dirSearchPath+="../";
+  # fi
+  # Detects a project by looking for addons.txt
+  if [ -f "${curDir}/${dirSearchPath}/addons.txt" ]; then
     projectDir=$(realpath "${curDir}/${dirSearchPath}");
-    #echo "Found OF/addons ! (`realpath ${projectDir}`)";
+    #echo "Found addons.txt ! (`realpath ${projectDir}`)";
     break;
   else
     #echo "Ignoring=`basename $(realpath ${curDir}/${dirSearchPath})`";
     dirSearchPath+="../";
   fi
+
   # decrement
   dirSearchLimit=$[$dirSearchLimit-1];
 done
@@ -286,13 +297,17 @@ else
   fi
 fi # Main repo git checks
 
-# Locate the addons folder
+# Locate the addons folder (from an oF project)
 cd "$projectDir/../../../addons" >> /dev/null 2>&1 ; #silenced
 #cd ../../../addons >> /dev/null 2>&1 ; #silenced
 # Addon folder doesn't exist ?
 if [[ $? -gt 0 ]]; then
-  echo "${style_red}ERROR : the addons folder was not found.${style_reset}"
-  exit 1;
+  # try one dir lower (typically for addons)
+  cd "$projectDir/../../addons" >> /dev/null 2>&1 ; #silenced
+  if [[ $? -gt 0 ]]; then
+    echo "${style_red}ERROR : the addons folder was not found.${style_reset}";
+    exit 1;
+  fi
 fi
 addonsDir=`pwd`;
 
@@ -326,7 +341,7 @@ if [ "$SHOW_INTRO" -eq 1 ]; then
     echo "Diagnostic : ${style_green}The base repo is clean.${style_reset}";
   fi
   echo "";
-  echo "Addons configuration file : $curDir/addons.txt";
+  echo "Addons configuration file : ${projectDir}/addons.txt";
   let numInstalledAddons=$(ls -l $addonsDir | grep -v ^ofx | wc -l | xargs); # xargs strips spaces
   echo "Detected addons directory : $addonsDir ($numInstalledAddons installed addons)";
   echo "";
@@ -351,8 +366,8 @@ fi
 if [ "$USER_ACTION" = "sync" ]; then
   
   # Does addons.txt exist ?
-  if [ ! -f "${curDir}/addons.txt" ]; then
-    echo "${style_red}Error: ${curDir}/addons.txt doesn't exist, cannot sync !${style_reset}";
+  if [ ! -f "${projectDir}/addons.txt" ]; then
+    echo "${style_red}Error: ${projectDir}/addons.txt doesn't exist, cannot sync !${style_reset}";
     exit 128;
   fi
 
@@ -427,7 +442,7 @@ if [ "$USER_ACTION" = "sync" ]; then
       addonsDotMakeContent+=$(echo $addon | cut -f1 -d' ');
       addonsDotMakeContent+="\n";
     fi
-  done < "$curDir/addons.txt";
+  done < "${projectDir}/addons.txt";
 
   # Write addons.make
   echo -e "${addonsDotMakeContent}" > "${projectDir}/addons.make";
@@ -710,7 +725,7 @@ while read addon; do
   if [ $? -eq 0 ]; then
     processAddon "$addon";
   fi
-done < "$curDir/addons.txt"
+done < "${projectDir}/addons.txt"
 
 echo "";
 echo "Work = done. Enjoy. :) ";

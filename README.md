@@ -25,7 +25,7 @@ Installation
 *Please, note that this is no OpenFrameworks addon, so don't install it in `path/to/of/addons`.*
 To install this tool, the best way is to add it to your OpenFrameworks project **as a submodule**.
 You're free to install it in the root of your project or in any subfolder. The script will fetch the first parent directory having a working git repository.
-In the example below, we install it to the `scripts`.
+In the example below, we install it to the `scripts` folder.
 ````bash
 cd /path/to/of/apps/myApps/exampleApp
 mkdir scripts && cd ./scripts
@@ -38,7 +38,7 @@ If you want fancy ASCI art, install `toilet` or `figlet`. (optional)
 
 Setup
 -----
-Edit `/path/to/ofxAddonTool/addons.txt` with your favourite text editor to suit the needs of your project.  
+Move `/ofProject/whatever/ofxAddonTool/addons.txt` to `/ofProject/addons.txt` and with your favourite text editor to suit the needs of your project.  
 For each addon, you need to provide the title (folder name), the URL and the branch to checkout.  
 Further instructions are within that file.  
 
