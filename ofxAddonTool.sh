@@ -575,7 +575,8 @@ function processAddon {
     # No detached head
     else
       # Parse local information
-      local addonLocalBranch=`git name-rev --name-only HEAD 2> /dev/null` # ex: master (local branch name)
+      #local addonLocalBranch=`git name-rev --name-only HEAD 2> /dev/null` # ex: master (local branch name)
+      local addonLocalBranch=`git rev-parse --abbrev-ref HEAD 2> /dev/null` # ex: master (local branch name)
       local addonTrackingRemote=`git config branch.$addonLocalBranch.remote` # ex: origin (remote's local name)
       #local addonRemoteUrl=$(git config remote.$addonTrackingRemote.url) # ex: https://github.com/armadillu/ofxTimeMeasurements
       local addonRemoteUrl=$(git remote get-url $addonTrackingRemote 2> /dev/null) # alternative for the above line
