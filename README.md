@@ -25,6 +25,9 @@ Installation
 ------------
 To install this tool, the easiest way is to add it to your OpenFrameworks project **as a submodule**, so you can easily track updates.  
 You're free to install it in the root of your project or in any subfolder. The script will assume your project root is the first parent directory containing `addons.txt`.  
+*Please, note that this is not an OpenFrameworks addon, so don't install it in `path/to/of/addons`.*  
+
+
 In the example below, we will install it to the `scripts` folder.
 ````bash
 cd /path/to/of/apps/myApps/exampleApp
@@ -38,8 +41,13 @@ mv ./scipts/ofxAddonTool/addons.txt ./addons.txt
 cd /path/to/of/apps/myApps/exampleApp
 curl -L -O https://raw.githubusercontent.com/daandelange/ofxAddonTool/master/addons.txt -L -O https://raw.githubusercontent.com/daandelange/ofxAddonTool/master/ofxAddonTool.sh
 ````
-*Please, note that this is not an OpenFrameworks addon, so don't install it in `path/to/of/addons`.*  
 
+### Install required dependencies
+For the use of `realpath`, included in the GNU core utilities :
+- Mac : `brew install coreutils` or `brew install coreutils --build-from-source` (10.12)
+- Linux : Included in most distros.
+
+### Install optional dependencies
 If you want fancy ASCI art, install `toilet` or `figlet`. (optional)
 - Mac : `brew install figlet`
 - Linux : `apt install figlet`

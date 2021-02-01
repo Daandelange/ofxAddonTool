@@ -136,6 +136,15 @@ for arg in "$@"; do
   fi
 done
 
+# Perform some checks to prevent errors later
+# Chech for realpath
+$( realpath "/" >> /dev/null 2>&1 );
+if [[  $? -gt 0 ]]; then
+  echo "Realpath is not installed but required, please install. (osx: brew install coreutils)";
+  echo "Exiting...";
+  exit 127;
+fi
+
 # No options ? Ask user what to do
 if [[ "$INTERACTIVE" -eq 1 && -z "$USER_ACTION" ]]; then
   echo   "Which action would you like to perform ? (please type a number)";
